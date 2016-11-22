@@ -89,4 +89,4 @@ ENV/
 .ropeproject
 
 #sample data
-.sample.yaml
+sample.yaml
