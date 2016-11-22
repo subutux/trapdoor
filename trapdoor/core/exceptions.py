@@ -1,0 +1,2 @@
+class ErrorTrapTransport(Exception):
+    pass
