@@ -188,7 +188,7 @@ def storeMib(config,mib,mibdir=None,fetchRemote=False):
     except smiError.PySmiError as e:
         log.error("Compilation failed: {}".format(e))
         raise exceptions.MibCompileError(e)
-        exit(1)
+
     errors = [(x, processed[x].error) for x in sorted(processed) if processed[x] == 'failed']
     compiled = [(x,processed[x].alias) for x in sorted(processed) if processed[x] == 'compiled']
     for mib in compiled:
@@ -198,4 +198,3 @@ def storeMib(config,mib,mibdir=None,fetchRemote=False):
             log.error("Could not process {} MIB: {}".format(error[0],error[1]))
         raise exceptions.MibCompileFailed(errors)
     log.info("Done without errors")
-    exit(0)

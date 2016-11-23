@@ -24,3 +24,4 @@ def get_db_session(engine):
 def init_db(engine):
     log.debug("Creating tables")
     models.Base.metadata.create_all(engine)
+

@@ -1,16 +1,17 @@
 #from . import trapdoor
-from .core import db
-from .core import config as conf
-from .core import authentication
-from .core import mibs
-from .core.exceptions import *
+
+from trapdoor import config as conf
+from trapdoor.core.exceptions import *
+
+import trapdoor.cli.configuration
+import trapdoor.cli.mib
+import trapdoor.cli.db
+
 import argparse
 import logging
-import getpass
 import sys
 
 LOGLEVELS = ["ERROR","WARNING","INFO","DEBUG"]
-
 def main():
     parser = argparse.ArgumentParser(description="Store & filter traps",
                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -75,13 +76,7 @@ when using --add-mib",
     # this needs to be here.
     
     if args.init_config:
-        try:
-            conf.writeDefaults(args.config)
-        except Exception as e:
-            log.error('Unable to write config! {}'.format(e))
-            exit(1)
-        exit(0)
-    
+       trapdoor.cli.configuration.init_config(conf,args)
     
     log.debug("Opening config file {}".format(args.config))
     try:
@@ -103,84 +98,15 @@ when using --add-mib",
         log.error("-m, --mibs makes no sense without --add-mib!")
         exit(1)
     if args.add_mib:
-        try:
-            mibs.storeMib(config,args.add_mib,args.mibs,
-            fetchRemote=args.allow_remote_mibs)
-        except exceptions.MibCompileError:
-            exit(1)
-        except exceptions.MibCompileFailed:
-            exit(1)
-        finally:
-            exit(0)
+       trapdoor.cli.mib.add_mib(config,args)
         
     if args.init_database:
-        
-        try:
-            
-            engine = db.engine.get_db_engine(user=config["db"]["user"],
-                                             password=config["db"]["password"],
-                                             db=config["db"]["database"],
-                                             host=config["db"]["host"])
-            
-            db.engine.init_db(engine)
-            
-        except Exception as exc:
-            log.error("Cannot initialize database: {}".format(exc))
+        trapdoor.cli.db.init_db(config)
     elif args.superuser:
-        engine = db.engine.get_db_engine(user=config["db"]["user"],
-                                         password=config["db"]["password"],
-                                         db=config["db"]["database"],
-                                         host=config["db"]["host"])
-        
-        session = db.engine.get_db_session(engine)
-        
-        
-        # get user password
-        pone = getpass.getpass(prompt="Password: ")
-        ptwo = getpass.getpass(prompt="Password agian: ")
-        
-        if pone != ptwo:
-            log.error("Passwords do not match!")
-            exit(1)
-        log.debug(session)
-        group = authentication.permission_add(session,"Superuser")
-        authentication.user_add(session,user=args.superuser,password=pone,
-                                superuser=True,permission=group)
-        
+        trapdoor.cli.db.create_superuser(config,args)
         
     if args.changepass:
-        log.debug("Password update for user {}".format(args.changepass))
-        engine = db.engine.get_db_engine(user=config["db"]["user"],
-                                         password=config["db"]["password"],
-                                         db=config["db"]["database"],
-                                         host=config["db"]["host"])
-        
-        session = db.engine.get_db_session(engine)
-        user = authentication.get_user(session,args.changepass)
-        if user == None:
-            log.error("Unknown user {}".format(args.changepass))
-            exit(1)
-        # get user password
-        pone = getpass.getpass(prompt="Password: ")
-        ptwo = getpass.getpass(prompt="Password agian: ")
-        
-        if pone != ptwo:
-            log.error("Passwords do not match!")
-            exit(1)
-        authentication.update_user_password(session,user,pone)
+        trapdoor.cli.db.change_password(config,args)
     if args.verifypass:
-        log.debug("Password update for user {}".format(args.verifypass))
-        engine = db.engine.get_db_engine(user=config["db"]["user"],
-                                         password=config["db"]["password"],
-                                         db=config["db"]["database"],
-                                         host=config["db"]["host"])
-        
-        session = db.engine.get_db_session(engine)
-        user = authentication.get_user(session,args.verifypass)
-        if user == None:
-            log.error("Unknown user {}".format(args.verifypass))
-            exit(1)
-        # get user password
-        pone = getpass.getpass(prompt="Password: ")
-        authentication.verify_password(user,pone)
+        trapdoor.cli.db.verify_password(config,args)
     return True

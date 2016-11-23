@@ -1,9 +1,9 @@
-from . import exceptions
+from .core import exceptions
 import yaml
 import os
 
 import logging
-log = logging.getLogger('trapdoor.core.config')
+log = logging.getLogger('trapdoor.config')
 log.addHandler(logging.NullHandler())
 
 DEFAULTS = {
@@ -56,7 +56,7 @@ class Config(object):
             with open(configfile,'r',encoding="utf-8") as cf:
                 try:
                     cfg = yaml.load(cf)
-                    log.debug("File parsed: {}".format(cfg))
+                    log.debug("File parsed")
                 except yaml.YAMLError as exc:
                     raise exceptions.ConfigNotParsedError(exc)
                 self._config = self._merge_default(DEFAULTS, cfg)

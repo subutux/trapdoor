@@ -1,9 +1,9 @@
 import logging
 from . import Handler
-log = logging.getLogger('trapdoor.core.handler')
+log = logging.getLogger('trapdoor.handler.log')
 log.addHandler(logging.NullHandler())
 
-__name__ = "log"
+
 __description__ = "A simple handler for traps"
 
 def setup(config):
