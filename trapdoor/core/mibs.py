@@ -1,11 +1,76 @@
+from . import exceptions
 import pysnmp.smi.builder
 import pysnmp.smi.view
+import pysnmp.smi.compiler
+import pysnmp.smi.error
 import pysnmp.entity.rfc3413.mibvar
 import pysnmp.proto.rfc1902
+
+from pysmi.reader.url import getReadersFromUrls
+from pysmi.searcher.pyfile import PyFileSearcher
+from pysmi.searcher.pypackage import PyPackageSearcher
+from pysmi.searcher.stub import StubSearcher
+from pysmi.borrower.pyfile import PyFileBorrower
+from pysmi.writer.pyfile import PyFileWriter
+from pysmi.parser.smi import parserFactory
+from pysmi.parser.dialect import smiV1Relaxed
+from pysmi.codegen.pysnmp import PySnmpCodeGen, defaultMibPackages, baseMibs, fakeMibs
+from pysmi.compiler import MibCompiler
+
+from pysmi import debug as smiDebug
+from pysmi import error as smiError
+
+import os
+
 import logging
 log = logging.getLogger('trapdoor.core.mibs')
 log.addHandler(logging.NullHandler())
 
+class MibCollection(object):
+    """
+    A class that holds our loaded MIBs
+    for easy management & lookups
+    
+    """
+    def __init__(self,config):
+        self.config = config
+        log.info("Initializing smi.Builder")
+        self.mibBuilder = pysnmp.smi.builder.MibBuilder()
+        self.modules = []
+        self.loadMibs()
+        
+    
+    def loadMibs(self,config=None):
+        """
+        A function allowing us to reload the mibs
+        while running
+        """
+        if config != None:
+            self.config = config
+        if hasattr(config,'mibs') and config["mibs"] != "":
+            log.info("Adding custom mibs from: {}".format(
+                    ", ".join(self.config["mibs"])))
+            pysnmp.smi.compiler.addMibCompiler(
+                self.mibBuilder,
+                sources=self.config["mibs"])
+            log.info("Done")
+            log.info("Indexing MIB objects")
+            self.mibView = pysnmp.smi.view.MibViewController(self.mibBuilder)
+            log.info("Done")
+            
+            self.modules = self._get_modules()
+    def _get_modules(self):
+        mibs = []
+        modName = self.mibView.getFirstModuleName()
+        while True:
+            if modName:
+                mibs.append(modName)
+            try:
+                modName = self.mibView.getNextModuleName(modName)
+            except pysnmp.smi.error.SmiError:
+                break
+        return mibs
+    
 class MibResolver(object):
     DEFAULT_MIB_PATHS = []
     DEFAULT_MIB_LIST = ['SNMPv2-MIB', 'SNMP-COMMUNITY-MIB']
@@ -53,3 +118,84 @@ class MibResolver(object):
 
     def lookup_value(self, module, symbol, value):
         return pysnmp.entity.rfc3413.mibvar.cloneFromMibValue(self._mib_view, module, symbol, value)
+
+def storeMib(config,mib,mibdir=None,fetchRemote=False):
+    """
+    A function to compile, store new mibs
+    
+    Mostly got the code from
+    https://raw.githubusercontent.com/etingof/pysmi/master/scripts/mibdump.py
+    """
+    cacheDir = ''
+    log.debug("Collecting MIB resources")
+    mibSearchers = defaultMibPackages
+    log.debug("Searches")
+    mibStubs = [x for x in baseMibs if x not in fakeMibs]
+    log.debug("Stubs")
+    mibSources = ["file://{}".format(x) for x in config["mibs"]["locations"]]
+    log.debug("MIB sources from config")
+    if mibdir != None:
+        mibSources.append("file://{}".format(mibdir))
+    
+    log.debug("MIB source from param")
+    #if "mib" is a path, add it to the sources.
+    if os.path.sep in mib:
+        mibSources.append(os.path.abspath(os.path.dirname(mib)))
+        log.debug("MIB source from '{}'".format(mib))
+    if fetchRemote:
+        mibSources.append('http://mibs.snmplabs.com/asn1/@mib@')
+        log.debug("Added remote mib source.")
+    log.info("Using MIB sources: [{}]".format(
+        ", ".join(mibSources)))
+    log.info("Using dest: {}".format(config['mibs']['compiled']))
+    log.info("Initialize compiler")
+    try:
+        mibCompiler = MibCompiler(
+            parserFactory(**smiV1Relaxed)(tempdir=cacheDir),
+            PySnmpCodeGen(),
+            PyFileWriter(config['mibs']['compiled']).setOptions(
+                pyCompile=True,pyOptimizationLevel=0
+            )
+        )
+    except Exception as e:
+        log.error("Exception! {}".format(e))
+    log.debug("Adding sources to compiler")
+    try:
+        mibCompiler.addSources(
+            *getReadersFromUrls(
+                *mibSources, **dict(
+                    fuzzyMatching=True
+                    )
+            )
+        )
+        mibCompiler.addSearchers(PyFileSearcher(config['mibs']['compiled']))
+        for mibSearcher in mibSearchers:
+            mibCompiler.addSearchers(PyPackageSearcher(mibSearcher))
+        mibCompiler.addSearchers(StubSearcher(*mibStubs))
+        
+        log.debug("Starting compilation of {}".format(mib))
+        processed = mibCompiler.compile(*[mib],
+                                        **dict(noDeps=False,
+                                               rebuild=False,
+                                               dryRun=False,
+                                               genTexts=False,
+                                               ignoreErrors=False))
+        mibCompiler.buildIndex(
+            processed,
+            dryRun=False,
+            ignoreErrors=False
+        )
+    except smiError.PySmiError as e:
+        log.error("Compilation failed: {}".format(e))
+        raise exceptions.MibCompileError(e)
+        exit(1)
+    errors = [(x, processed[x].error) for x in sorted(processed) if processed[x] == 'failed']
+    compiled = [(x,processed[x].alias) for x in sorted(processed) if processed[x] == 'compiled']
+    for mib in compiled:
+        log.info("Compiled {} ({})".format(mib[0],mib[1]))
+    if len(errors) > 0:
+        for error in errors:
+            log.error("Could not process {} MIB: {}".format(error[0],error[1]))
+        raise exceptions.MibCompileFailed(errors)
+    log.info("Done without errors")
+    exit(0)

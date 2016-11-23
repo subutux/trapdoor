@@ -17,4 +17,9 @@ class logger(Handler):
         Handler.__init__(self,config)
     
     def trap(self,trap_oid,trap_args,trap_properties):
-        log.info("TRAP:{oid} from {ip}".format(oid=trap_oid,ip=trap_args["ipaddress"]))
+        args = ", ".join("=".join(_) for _ in trap_args.items())
+        log.info(
+            "TRAP:{oid} from {ip}: {args}".format(
+                                           oid=trap_oid,
+                                           ip=trap_properties["ipaddress"],
+                                           args=args))
