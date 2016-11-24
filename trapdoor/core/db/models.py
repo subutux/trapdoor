@@ -55,3 +55,11 @@ class Host(Base):
     ip = sa.Column(String(256),nullable=False)
     created = sa.Column(DateTime,default=sa.func.now())
     active = sa.Column(Boolean,nullable=False,server_default="0")
+
+class Filter(Base):
+    __tablename__ = 'filter'
+    id = Column(Integer, primary_key=True,autoincrement=True)
+    oid = Column(String(256),nullable=True)
+    host = Column(Integer,ForeignKey('Host.id'),primary_key=True,nullable=True)
+    filter = Column(String(256),nullable=False)
+    active = Column(Boolean,nullable=False,server_default='1')
