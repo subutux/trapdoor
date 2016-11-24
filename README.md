@@ -48,13 +48,13 @@ queue.
 Let's follow the trail of a incoming trap:
 1. Trap is recieved at `trapdoor.core.Trap` [async]
 2. It gets pushed to the Queue [async]
-3. Where a waiting thread picks it up [sync/thread]
-4. We lookup the filter in the database
-5. Apply the JS filter
+3. Where a waiting thread picks it up [async/thread]
+4. We lookup the filter in the database [actionThread]
+5. Apply the JS filter [actionThread]
 6. If the filter has explicitly returned `next: False`, go to
    the next step, else re-apply it to the queue with this filter
    marked as done. Note that the filter also allows to 'split' the
    trap into clones. A clone that goes to the handlers & one that
-   goes back into the queue.
-7. Handle the trap using the specified handler.
-8. Save to the database.
+   goes back into the queue. [actionThread]
+7. Handle the trap using the specified handler. [actionThread]
+8. Save to the database. [actionThread]
