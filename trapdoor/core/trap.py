@@ -67,9 +67,9 @@ class trapReciever(object):
             self._enable_transport_ipv4()
     
     def _enable_v2c(self):
+        log.info("Init v2c authentication")
         community = self._config["v2c"]["community"]
         pysnmp.entity.config.addV1System(self._engine, 'trapdoor', community)
-        log.info("Init v2c authentication")
     
     def _enable_v3(self):
         priv = self._config["v3"]["private"]
@@ -77,6 +77,8 @@ class trapReciever(object):
         auth = self._config["v3"]["auth"]
         user = self._config["v3"]["user"]
         user_pass = self._config["v3"]["pass"]
+        
+        log.info("init snmpv3 authentication")
         
         if auth not in V3_AUTH:
             log.error("Hashing of type '{}' not known!".format(auth))
@@ -106,4 +108,3 @@ class trapReciever(object):
             log.info("Created SnmpV3 user {} using {} & private None".format(
                 user, auth))
             
-        log.info("init snmpv3 authentication")
