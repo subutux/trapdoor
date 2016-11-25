@@ -22,20 +22,26 @@ FILTER_TEMPLATE='''// Trapdoor - filter
 // { "timestamp": 123456789,
 //   "oid": "1.2.3.4.5.6.7.8"
 //   "translatedOid:"My.Trap.Translation"
+//   "ip": 0.0.0.0,
 //   "vars": {
 //     "myVar" : "varValue",
 //     "myVar1" : "varValue1",
 //     "myVar2" : "varValue2"
+//    },
+//    history: {
+//      "filters": [list of previous filters if any]
 //    }
 // }
 // ´´´
-// Your trap shoud return an object like this:
+// **Note**: You don't add your filter to history itself. That's done
+//           automagically.
+// Your trap must return an object with a minimun options of this:
 // ```
 // { "store": true,
-//   "next": false
+//   "next": false,
 //   "handle": true,
-//   "handler": "log"
-//    "trap": `[trap object]`
+//   "handler": "log",
+//   "trap": `[trap object]`,
 // }
 
 function Filter(Trap) {
@@ -180,9 +186,10 @@ class Filter(object):
         self._handlers = handlers
         self._setContext()
     
-    def evaluate(self,trap):
+    def evaluate(self,Trap):
         """
         Evaluate the js "Filter() function"
         """
+        trap = Trap.to_dict()
 
-        return self._context.Filter(trap)
+        return self._context.Filter(trap).to_dict()

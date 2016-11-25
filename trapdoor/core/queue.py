@@ -10,4 +10,21 @@ in async.
 
 import janus
 import asyncio
+MAX_WORKERS = 0 #Infinite
+loop = asyncio.get_event_loop()
+Queue = janus.Queue(loop=loop,maxsize=MAX_WORKERS)
 
+class Action(object):
+    """
+    An action is a worker in the Queue. Executing the Filter
+    & handler.
+    """
+    
+    def __init__(self,Filter,Q):
+        self._Filter = Filter
+        self.Q = Q
+        self.Trap = Q.get()
+    def Do(self):
+        result = self._Filter.evaluate(self.Trap)
+        
+        

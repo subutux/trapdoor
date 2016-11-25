@@ -7,6 +7,8 @@ import trapdoor.cli.configuration
 import trapdoor.cli.mib
 import trapdoor.cli.db
 
+import trapdoor.trapdoor
+
 import argparse
 import logging
 import sys
@@ -27,10 +29,10 @@ def main():
 
     starters.add_argument('-T','--trap-only',
                        help="Only launch the snmp trap reciever",
-                       action="store_true")
+                       action="store_false", default=True)
     starters.add_argument('-W','--web-only',
                            help="Only launch the Web manager",
-                           action="store_true")
+                           action="store_false",  default=True)
     starters.add_argument('--init-database',
                          help="Initialize the database",
                          action="store_true")
@@ -98,15 +100,22 @@ when using --add-mib",
         log.error("-m, --mibs makes no sense without --add-mib!")
         exit(1)
     if args.add_mib:
-       trapdoor.cli.mib.add_mib(config,args)
+        trapdoor.cli.mib.add_mib(config,args)
+        exit(0)
         
     if args.init_database:
         trapdoor.cli.db.init_db(config)
+        exit(0)
     elif args.superuser:
         trapdoor.cli.db.create_superuser(config,args)
-        
+        exit(0)
     if args.changepass:
         trapdoor.cli.db.change_password(config,args)
+        exit(0)
     if args.verifypass:
         trapdoor.cli.db.verify_password(config,args)
-    return True
+        exit(0)
+    
+    trapdoor.trapdoor.main(config)
+    
+    

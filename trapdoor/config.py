@@ -14,11 +14,17 @@ DEFAULTS = {
         "database": "trapdoor"
         },
     "traps" : {
-        "port": 162,
-        "listen": "0.0.0.0",
         "transport":{
-            "ipv4": True,
-            "ipv6": False
+            "ipv4": {
+                "enable": True,
+                "listen": "0.0.0.0",
+                "port":162,
+            },
+            "ipv6": {
+                "enable": True,
+                "listen": "::1",
+                "port":162,
+            },
         },
         "v2c": {
             "enable": True,
