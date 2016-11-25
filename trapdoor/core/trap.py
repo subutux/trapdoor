@@ -121,7 +121,7 @@ class trapReciever(object):
             log.info("Created SnmpV3 user {} using {} & private None".format(
                 user, auth))
         
-    def _notification_callback(self, snmp_engine, stateReference, contextEngineId, contextName, varBinds,cbCtx):
+    def _notification_callback(self, snmpEngine, stateReference, contextEngineId, contextName, varBinds,cbCtx):
         """
         Callback function for receiving notifications
         Borrowed from https://github.com/subutux/nagios-trapd/blob/master/src/nagios/snmp/receiver.py#L120
@@ -133,8 +133,8 @@ class trapReciever(object):
 
         try:
             # get the source address for this notification
-            transportDomain, trap_source =      snmp_engine.msgAndPduDsp.getTransportInfo(stateReference)
-            transportDomain, transportAddress = snmp_engine.msgAndPduDsp.getTransportInfo(stateReference)
+            transportDomain, trap_source =      snmpEngine.msgAndPduDsp.getTransportInfo(stateReference)
+            #transportDomain, transportAddress = snmpEngine.msgAndPduDsp.getTransportInfo(stateReference)
             log.debug("Notification received from %s, %s" % (trap_source[0], trap_source[1]))
 
             # read all the varBinds
@@ -148,7 +148,8 @@ class trapReciever(object):
                     # load the mib symbol/modname for the trap oid
                     (trap_symbol_name, trap_mod_name) = self._mibs.lookup_oid(trap_oid)
                     trap_name = "{}::{}".format(trap_symbol_name,trap_mod_name)
-                    
+                    val = '::'.join(self._mibs.lookup_oid(val))
+                    log.debug("TRAP: %s::%s = %s" % (module, symbol, val))
                 else:
                     # all other values should be converted to mib symbol/modname
                     # and put in the trap_data dict
@@ -168,7 +169,7 @@ class trapReciever(object):
                                                "try_trans_val":trap_arg_value
                                                }
 
-                log.debug("Trap argument: %s, %s = %s" % (module, symbol, val))
+                    log.debug("Trap argument: %s::%s = %s" % (module, symbol, val))
 
             # get trap source info
             trap_source_address, trap_source_port = trap_source
@@ -191,8 +192,8 @@ class trapReciever(object):
             self.Q.async_q.put(Trap(trap))
 
         except Exception as ex:
-            log.exception("Error handling SNMP notification")
-    
+            log.exception("Error handling SNMP notification: {}".format(ex))
+        return True
     def cbFun(self,snmpEngine,
           stateReference,
           contextEngineId, contextName,
@@ -210,7 +211,7 @@ class trapReciever(object):
         """
         registers the engine & callback
         """
-        ntfrcv.NotificationReceiver(self._engine,self.cbFun)
+        ntfrcv.NotificationReceiver(self._engine,self._notification_callback)
         log.info('Registered callback')
         return True
 
