@@ -75,12 +75,13 @@ class MibResolver(object):
     DEFAULT_MIB_PATHS = []
     DEFAULT_MIB_LIST = ['SNMPv2-MIB', 'SNMP-COMMUNITY-MIB']
 
-    def __init__(self, mib_paths=None, mib_list=None):
+    def __init__(self,config, mib_paths=None, mib_list=None):
         if mib_paths is None:
             mib_paths = []
         if mib_list is None:
             mib_list = []
-
+        self.config = config
+        mib_paths.append(config["mibs"]["compiled"])
         # Initialize mib MibBuilder
         self._mib_builder = pysnmp.smi.builder.MibBuilder()
 
@@ -94,9 +95,45 @@ class MibResolver(object):
         for mib in self.DEFAULT_MIB_LIST + mib_list:
             self.load_mib(mib)
 
+        self._detect_mibs_compiled()
         # Initialize MibViewController
         self._mib_view = pysnmp.smi.view.MibViewController(self._mib_builder)
         log.debug("MibResolver: Initialized")
+
+    def _detect_mibs_compiled(self):
+        try_again=[]
+        tries = {}
+        for dirname, dirnames, filenames in os.walk(
+                                            self.config["mibs"]["compiled"]):
+            for filename in filenames:
+                if filename.endswith(".py") and filename != "index.py":
+
+                    mib = os.path.splitext(filename)[0]
+                    try:
+                        self.load_mib(mib)
+                    except pysnmp.smi.error.MibLoadError as e:
+                        log.info("Cannot load {}. I'll try again later.".format(e))
+                        try_again.append(mib)
+
+            if "__pycache__" in dirnames:
+                dirnames.remove("__pycache__")
+
+        # second try, tirth try ...
+        while len(try_again) > 0:
+            for mib in try_again:
+                try:
+                    self.load_mib(mib)
+                    try_again.remove(mib)
+                except pysnmp.smi.error.MibLoadError as e:
+                    if mib in tries:
+                        tries[mib] += 1
+                    else:
+                        tries[mib] = 1
+                    if tries[mib] > 3:
+                        log.error('Failed {}'.format(e))
+                        try_again.remove(mib)
+                    else:
+                        log.info("failed {}. I'll try again.".format(e))
 
     def load_mib_dir(self, path):
         self._mib_sources += (pysnmp.smi.builder.DirMibSource(path),)
