@@ -126,7 +126,7 @@ def storeMib(config,mib,mibdir=None,fetchRemote=False):
     Mostly got the code from
     https://raw.githubusercontent.com/etingof/pysmi/master/scripts/mibdump.py
     """
-    cacheDir = ''
+    cacheDir = '/tmp/'
     log.debug("Collecting MIB resources")
     mibSearchers = defaultMibPackages
     log.debug("Searches")
@@ -157,6 +157,7 @@ def storeMib(config,mib,mibdir=None,fetchRemote=False):
                 pyCompile=True,pyOptimizationLevel=0
             )
         )
+        print(mibSources)
     except Exception as e:
         log.error("Exception! {}".format(e))
     log.debug("Adding sources to compiler")
@@ -191,10 +192,15 @@ def storeMib(config,mib,mibdir=None,fetchRemote=False):
 
     errors = [(x, processed[x].error) for x in sorted(processed) if processed[x] == 'failed']
     compiled = [(x,processed[x].alias) for x in sorted(processed) if processed[x] == 'compiled']
+    missing = [ x for x in sorted(processed) if processed[x] == 'missing']
     for mib in compiled:
         log.info("Compiled {} ({})".format(mib[0],mib[1]))
-    if len(errors) > 0:
+    if len(errors) > 0 or len(missing) > 0:
         for error in errors:
             log.error("Could not process {} MIB: {}".format(error[0],error[1]))
+        for mis in missing:
+            log.error("Could not find {}".format(mis))
+           
         raise exceptions.MibCompileFailed(errors)
     log.info("Done without errors")
+    print(processed)
