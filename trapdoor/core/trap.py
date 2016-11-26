@@ -34,7 +34,7 @@ class trapReciever(object):
         self._config = config
         self._engine = pysnmp.entity.engine.SnmpEngine()
         self._mibs = mibs.MibResolver(config)
-        self.transports = []
+        self.transports = {}
         self.Q = Q
         if loop == None:
             self.loop = asyncio.get_event_loop()
@@ -61,7 +61,7 @@ class trapReciever(object):
             (self._config["traps"]["transport"]["ipv4"]["listen"],
              int(self._config["traps"]["transport"]["ipv4"]["port"]))
         )
-        self.transports.append(servermode)
+        self.transports["[UDP]ipv4"] = servermode
         pysnmp.entity.config.addTransport(self._engine,
                                                 udp.domainName,
                                                 servermode)
@@ -74,7 +74,7 @@ class trapReciever(object):
             (self._config["traps"]["transport"]["ipv6"]["listen"],
              int(self._config["traps"]["transport"]["ipv6"]["port"]))
         )
-        self.transports.append(servermode)
+        self.transports["[UDP]ipv6"] = servermode
         pysnmp.entity.config.addTransport(self._engine,
                                                 udp6.domainName,
                                                 servermode)
@@ -214,6 +214,12 @@ class trapReciever(object):
         """
         registers the engine & callback
         """
+        for servermode in self.transports:
+            task = self.transports[servermode]._lport
+            if task.done():
+                log.error("Error setting up {}: {}".format(servermode,task.exception()))
+            else:
+                log.info("Started {}".format(servermode))
         ntfrcv.NotificationReceiver(self._engine,self._notification_callback)
         log.info('Registered callback')
         return True
