@@ -33,7 +33,8 @@ class trapReciever(object):
     def __init__(self,config,Q,loop=None):
         self._config = config
         self._engine = pysnmp.entity.engine.SnmpEngine()
-        self._mibs = mibs.MibResolver()
+        self._mibs = mibs.MibResolver(config)
+        self.transports = []
         self.Q = Q
         if loop == None:
             self.loop = asyncio.get_event_loop()
@@ -60,6 +61,7 @@ class trapReciever(object):
             (self._config["traps"]["transport"]["ipv4"]["listen"],
              int(self._config["traps"]["transport"]["ipv4"]["port"]))
         )
+        self.transports.append(servermode)
         pysnmp.entity.config.addTransport(self._engine,
                                                 udp.domainName,
                                                 servermode)
@@ -70,14 +72,15 @@ class trapReciever(object):
     def _enable_transport_ipv6(self):
         servermode = udp6.Udp6Transport().openServerMode(
             (self._config["traps"]["transport"]["ipv6"]["listen"],
-             int(self._config["traps"]["transport"]["ipv4"]["port"]))
+             int(self._config["traps"]["transport"]["ipv6"]["port"]))
         )
+        self.transports.append(servermode)
         pysnmp.entity.config.addTransport(self._engine,
                                                 udp6.domainName,
                                                 servermode)
         log.info("Init UDP[ipv6] transport on {listen}:{port}".format(
-            listen=self._config["traps"]["transport"]["ipv4"]["listen"],
-            port=self._config["traps"]["transport"]["ipv4"]["port"]))
+            listen=self._config["traps"]["transport"]["ipv6"]["listen"],
+            port=self._config["traps"]["transport"]["ipv6"]["port"]))
     
     def _enable_v2c(self):
         log.info("Init v2c authentication")
@@ -214,7 +217,18 @@ class trapReciever(object):
         ntfrcv.NotificationReceiver(self._engine,self._notification_callback)
         log.info('Registered callback')
         return True
+    @asyncio.coroutine
+    def stop(self):
+        if self._config["traps"]["transport"]["ipv4"]["enable"]:
+            log.info("Closing {} transport".format(str("UDP[ipv4]")))
+            pysnmp.entity.config.delTransport(self._engine,udp.domainName)
+            log.info("Closed {} transport".format(str("UDP[ipv4]")))
+        if self._config["traps"]["transport"]["ipv6"]["enable"]:
+            log.info("Closing {} transport".format(str("UDP[ipv6]")))
+            pysnmp.entity.config.delTransport(self._engine,udp6.domainName)
+            log.info("Closed {} transport".format(str("UDP[ipv6]")))
 
+        log.info("trapReciever stopped.")
 class Trap(object):
     """
     an object defining a trap.

@@ -27,7 +27,9 @@ def main(config,web=True,trap=True):
         http://stackoverflow.com/q/23313720
         """
         log.error("got signal %s: exit" % signame)
-        loop.stop()
+
+        loop.create_task(Trapdoor_reciever.stop())
+        loop.call_later(0.1,loop.stop)
     for signame in ('SIGINT', 'SIGTERM'):
         loop.add_signal_handler(getattr(signal, signame),
                                 ask_exit)
@@ -36,7 +38,10 @@ def main(config,web=True,trap=True):
         Trapdoor_reciever = core_trap.trapReciever(config,Q,loop)
         loop.create_task(Trapdoor_reciever.register())
     if web:
-        log.info("Web not implemented yet.")
+        log.error("Launching Web")
+        core_web.Web(loop)
+    
     loop.run_forever()
+    loop.close()
     
 
