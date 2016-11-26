@@ -27,12 +27,14 @@ setup(
     install_requires= [
     
         "pysnmp",
-        "py2js",
+        "js2py",
         "aiohttp",
         "janus",
         "sqlalchemy",
         "pymysql",
-        "aiomysql"
+        "aiomysql",
+	"pyyaml",
+	"passlib"
         
     ],
     #tests_require=["requests_mock"],
