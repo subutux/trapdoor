@@ -26,9 +26,10 @@ def main(config,web=True,trap=True):
         """
         http://stackoverflow.com/q/23313720
         """
-        log.error("got signal %s: exit" % signame)
+        log.warning("got signal %s: exit" % signame)
 
         loop.create_task(Trapdoor_reciever.stop())
+        loop.create_task(Web.stop())
         loop.call_later(0.1,loop.stop)
     for signame in ('SIGINT', 'SIGTERM'):
         loop.add_signal_handler(getattr(signal, signame),
@@ -36,11 +37,10 @@ def main(config,web=True,trap=True):
     Q = core_queue.Queue
     if trap:
         Trapdoor_reciever = core_trap.trapReciever(config,Q,loop)
-        loop.create_task(Trapdoor_reciever.register())
+        asyncio.ensure_future(Trapdoor_reciever.register())
     if web:
-        log.error("Launching Web")
-        core_web.Web(loop)
-    
+        Web = core_web.Web(config,loop=loop)
+        asyncio.ensure_future(Web.start())
     loop.run_forever()
     loop.close()
     

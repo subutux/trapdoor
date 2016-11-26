@@ -6,20 +6,39 @@ log = logging.getLogger('trapdoor.core.web')
 log_access = logging.getLogger('trapdoor.core.web.access')
 log.addHandler(logging.NullHandler())
 
-@asyncio.coroutine
-def handle(request):
-    name = request.match_info.get('name', "Anonymous")
-    text = "Hello, " + name
-    return web.Response(text=text)
+class Web(object):
+	def __init__(self,config,loop=None):
+		if loop == None:
+			self.loop = asyncio.get_event_loop()
+		else:
+			self.loop = loop
 
+		self._config = config
+		self.app = None
+		self.handler = None
+	@asyncio.coroutine
+	def handle(self,request):
+	    name = request.match_info.get('name', "Anonymous")
+	    text = "Hello, " + name
+	    return web.Response(text=text)
 
-def Web(loop,port=8080):
-	log.info("Launching web on port {}".format(port))
+	@asyncio.coroutine
+	def start(self):
+		port = self._config["web"]["transport"]["ipv4"]["port"]
+		listen = self._config["web"]["transport"]["ipv4"]["listen"]
+		
+		log.info("Launching web on {}:{}".format(listen,port))
 
-	app = web.Application(loop=loop)
-	app.router.add_get('/', handle)
-	app.router.add_get('/{name}', handle)
-	handler = app.make_handler(logger=log, access_log=log_access)
-	f = loop.create_server(handler, '0.0.0.0', port)
-	srv = loop.run_until_complete(f)
-	#web.run_app(app,port=port)
+		self.app = web.Application(loop=self.loop)
+		self.app.router.add_get('/', self.handle)
+		self.app.router.add_get('/{name}', self.handle)
+		self.handler = self.app.make_handler(logger=log, access_log=log_access)
+		self._server = self.loop.create_server(self.handler, listen, port)
+		#srv = loop.run_until_complete(f)
+		yield from self._server
+		#web.run_app(app,port=port)
+	@asyncio.coroutine
+	def stop(self):
+		log.warning("Stopping Web")
+		yield from self.app.shutdown()
+		yield from self.app.cleanup()
