@@ -8,7 +8,7 @@ from .core import trap as core_trap
 from .core import web as core_web
 from .core import queue as core_queue
 #asyncio.AbstractEventLoop.set_debug(enabled=True)
-
+__version__="0.0.1b"
     
 
 def main(config,web=True,trap=True):
