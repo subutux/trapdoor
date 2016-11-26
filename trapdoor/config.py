@@ -13,6 +13,15 @@ DEFAULTS = {
         "password": "",
         "database": "trapdoor"
         },
+    "web":{
+        "transport": {
+            "ipv4": {
+                "enable": True,
+                "listen": "0.0.0.0",
+                "port": 8080
+            }
+        }
+    },
     "traps" : {
         "transport":{
             "ipv4": {
