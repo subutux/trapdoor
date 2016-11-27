@@ -1,6 +1,6 @@
 import asyncio
 from aiohttp import web
-from trapdoor.core.db import Engine
+from trapdoor.core.db.engine import Engine
 
 import logging
 log = logging.getLogger('trapdoor.core.web')
