@@ -3,7 +3,7 @@ from .core import web as core_web
 from .core import queue as core_queue
 
 import asyncio
-# import functools
+import functools
 import signal
 import sys
 import logging
@@ -24,18 +24,19 @@ def main(config, web=True, trap=True):
 
     loop = asyncio.get_event_loop()
 
-    def ask_exit(signame="QUIT"):
-        """
-        http://stackoverflow.com/q/23313720
-        """
+    def ask_exit(signame="QUIT",web=True,trap=True):
         log.warning("got signal %s: exit" % signame)
-
-        loop.create_task(Trapdoor_reciever.stop())
-        loop.create_task(Web.stop())
-        loop.call_later(0.5, loop.stop)
+        if trap:
+            loop.create_task(Trapdoor_reciever.stop())
+        if web:
+            loop.create_task(Web.stop())
+        loop.call_later(0.1, loop.stop)
     for signame in ('SIGINT', 'SIGTERM'):
         loop.add_signal_handler(getattr(signal, signame),
-                                ask_exit)
+                                functools.partial(ask_exit,
+                                                  signame=signame,
+                                                  web=web,
+                                                  trap=trap))
     Q = core_queue.Queue
     if trap:
         Trapdoor_reciever = core_trap.trapReciever(config, Q, loop)

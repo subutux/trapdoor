@@ -29,10 +29,10 @@ def main():
 
     starters.add_argument('-T','--trap-only',
                        help="Only launch the snmp trap reciever",
-                       action="store_false", default=True)
+                       action="store_false", dest='web_enabled', default=True)
     starters.add_argument('-W','--web-only',
                            help="Only launch the Web manager",
-                           action="store_false",  default=True)
+                           action="store_false", dest='trap_enabled', default=True)
     starters.add_argument('--init-database',
                          help="Initialize the database",
                          action="store_true")
@@ -116,6 +116,6 @@ when using --add-mib",
         trapdoor.cli.db.verify_password(config,args)
         exit(0)
     
-    trapdoor.trapdoor.main(config)
+    trapdoor.trapdoor.main(config,web=args.web_enabled,trap=args.trap_enabled)
     
     
