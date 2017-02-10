@@ -1,69 +1,70 @@
 import sqlalchemy as sa
-from sqlalchemy import Column, String, Integer
-from sqlalchemy import ForeignKey, Boolean, DateTime
-from sqlalchemy.orm import relationship
+from sqlalchemy import MetaData, Table, Column, String
+from sqlalchemy import Integer, ForeignKey, Boolean, DateTime, Text
+from sqlalchemy.dialects.mysql import TEXT
 from sqlalchemy.ext.declarative import declarative_base
+#from sqlalchemy.orm import relationship
 import logging
 log = logging.getLogger('trapdoor.core.db.models')
 log.addHandler(logging.NullHandler())
 
+
 Base = declarative_base()
+metadata = MetaData()
 
 
-class Permission(Base):
-    __tablename__ = "permission"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    users = relationship("User", cascade="all, delete-orphan",
-                         backref='permission')
-    name = Column(String(256), nullable=False)
+Permission = Table('permission', metadata,
+                   Column('id', Integer, primary_key=True, autoincrement=True),
+                   Column('name', String(256), nullable=False)
+                   )
 
+User = Table('user', metadata,
+              Column('id', Integer, primary_key=True, autoincrement=True),
+              Column('login', String(256), nullable=False),
+              Column('full_name', String(256), nullable=False),
+              Column('password', String(256), nullable=False),
+              Column('is_superuser', Boolean, nullable=False,
+                     server_default='0'),
+              Column('disabled', Boolean, nullable=False,
+                     server_default='0'),
+              Column('permissions', Integer, ForeignKey('permission.id'),
+                     primary_key=True, nullable=True)
+              )
 
-class User(Base):
-    __tablename__ = "user"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    login = Column(String(256), nullable=False)
-    password = Column(String(256), nullable=False)
-    is_superuser = Column(Boolean, nullable=False,
-                          server_default='0')
-    disabled = Column(Boolean, nullable=False,
-                      server_default='0')
-    permissions = Column(Integer, ForeignKey(
-        'permission.id'), primary_key=True, nullable=True)
+Apikey = Table('apikey',metadata,
+               Column('id',Integer, primary_key=True, autoincrement=True),
+               Column('user_id', Integer, ForeignKey('user.id'), nullable=False),
+               Column('key', String(256), nullable=False),
+               # Invalidate the key directly if there is not datetime given.
+               Column('valid_until',DateTime,default=sa.func.now())
+               )
 
+Variable = Table('variable',metadata,
+                 Column('id',Integer, primary_key=True,autoincrement=True),
+                 Column('var',String(256)),
+                 Column('val',String(256)),
+                 Column('message_id',ForeignKey('message.id'),primary_key=True)
+                 )
 
-class Variable(Base):
-    __tablename__ = 'variable'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    var = Column(String(256))
-    val = Column(String(256))
-    message_id = Column(ForeignKey('message.id'))
+Message = Table('message',metadata,
+                Column('id',primary_key=True,autoincrement=True),
+                Column('host_id',ForeignKey('host.id'),primary_key=True),
+                Column('timestamp',DateTime,default=sa.func.now()),
+                Column('oid',String(256),nullable=False),
+                Column('mib',String(256),nullable=False)
+               )
+Host = Table('host',metadata,
+               Column('id',primary_key=True,autoincrement=True),
+               Column('hostname',String(256)),
+               Column('ip',String(256),nullable=False),
+               Column('created',DateTime,default=sa.func.now()),
+               Column('active',Boolean,nullable=False,server_default="0")
+               )
 
-
-class Message(Base):
-    __tablename__ = "message"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    host_id = Column(ForeignKey('host.id'))
-    timestamp = sa.Column(DateTime, default=sa.func.now())
-    oid = sa.Column('oid', String(256), nullable=False)
-    mib = sa.Column('mib', String(256), nullable=False)
-    variables = relationship(Variable)
-
-
-class Host(Base):
-    __tablename__ = 'host'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    messages = relationship(Message)
-    hostname = sa.Column(String(256), nullable=False)
-    ip = sa.Column(String(256), nullable=False)
-    created = sa.Column(DateTime, default=sa.func.now())
-    active = sa.Column(Boolean, nullable=False, server_default="0")
-
-
-class Filter(Base):
-    __tablename__ = 'filter'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    oid = Column(String(256), nullable=True)
-    host = Column(Integer, ForeignKey('host.id'),
-                  primary_key=True, nullable=True)
-    filter = Column(String(256), nullable=False)
-    active = Column(Boolean, nullable=False, server_default='1')
+Filter = Table('filter',metadata,
+               Column('id',primary_key=True,autoincrement=True),
+               Column('oid',String(256),nullable=False),
+               Column('host_id',ForeignKey('host.id'),primary_key=True),
+               Column('filter',String(256),nullable=False),
+               Column('active',Boolean,nullable=False,server_default="0")
+            )

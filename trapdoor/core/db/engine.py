@@ -9,14 +9,14 @@ log.addHandler(logging.NullHandler())
 
 
 def get_db_engine(host, user, password, db):
-    url = "mysql+pymysql://{user}:{password}@{host}/{db}"
+    url = "mysql+pymysql://{user}:{password}@{host}/{db}?charset=utf8mb4&use_unicode=1"
 
     log.debug("Creating connection to {}".format(
         url.format(
             user=user, password="*********", host=host, db=db)))
     url = url.format(
         user=user, password=password, host=host, db=db)
-    engine = create_engine(url)
+    engine = create_engine(url,encoding="utf-8")
     return engine
 
 
@@ -28,7 +28,8 @@ def get_db_session(engine):
 
 def init_db(engine):
     log.debug("Creating tables")
-    models.Base.metadata.create_all(engine)
+    tables = models.metadata.tables.keys()
+    models.metadata.create_all(engine)
 
 
 class Engine(object):
@@ -38,18 +39,14 @@ class Engine(object):
 
     def __init__(self, config):
         self._config = config
-        self._engine = None
-        self._session = None
+        self.engine = None
 
     @asyncio.coroutine
     def connect(self):
-        self._engine = yield from aiomysql.create_engine(
+        self.engine = yield from aiomysql.sa.create_engine(
             user=self._config["db"]["user"],
-            password=self._config["db"]["host"],
+            password=self._config["db"]["password"],
             host=self._config["db"]["host"],
-            database=self._config["db"]["db"])
-
-    def session(self):
-        if self._session is None:
-            self._session = sessionmaker(bind=self._engine)
-        return self._session
+            db=self._config["db"]["database"],
+            autocommit=True, charset='utf8mb4',
+            use_unicode=True)
