@@ -32,7 +32,7 @@ def main(config, web=True, trap=True):
 
         loop.create_task(Trapdoor_reciever.stop())
         loop.create_task(Web.stop())
-        loop.call_later(0.1, loop.stop)
+        loop.call_later(0.5, loop.stop)
     for signame in ('SIGINT', 'SIGTERM'):
         loop.add_signal_handler(getattr(signal, signame),
                                 ask_exit)

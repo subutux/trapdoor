@@ -46,5 +46,11 @@ class Web(object):
     @asyncio.coroutine
     def stop(self):
         log.warning("Stopping Web")
+        log.warning("Stopping db connection")
+        yield from self.app.db.disconnect()
+        
+        log.warning("shutdown")
         yield from self.app.shutdown()
+        
+        log.warning("cleanup")
         yield from self.app.cleanup()

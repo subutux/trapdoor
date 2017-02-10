@@ -50,3 +50,17 @@ class Engine(object):
             db=self._config["db"]["database"],
             autocommit=True, charset='utf8mb4',
             use_unicode=True)
+    
+    @asyncio.coroutine
+    def disconnect(self):
+        
+        log.debug("Closing connections")
+        self.engine.close()
+        
+        log.debug("Terminating connections")
+        self.engine.terminate()
+        log.debug("Waiting for close")
+        yield from self.engine.wait_closed()
+        log.debug("close")
+        
+        
