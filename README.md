@@ -46,6 +46,7 @@ named Janus, that has async & sync handlers for modifying the
 queue.
 
 Let's follow the trail of a incoming trap:
+
 1. Trap is recieved at `trapdoor.core.Trap` [async]
 2. It gets pushed to the Queue [async]
 3. Where a waiting thread picks it up [async/thread]
