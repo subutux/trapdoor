@@ -105,6 +105,7 @@ class MibResolver(object):
         log.debug("MibResolver: Initialized")
 
     def _detect_mibs_compiled(self):
+        log.info("Detecting compiled mibs")
         try_again = []
         tries = {}
         for dirname, dirnames, filenames in os.walk(
@@ -114,6 +115,7 @@ class MibResolver(object):
 
                     mib = os.path.splitext(filename)[0]
                     try:
+                        log.info('trying to load {}'.format(mib))
                         self.load_mib(mib)
                     except pysnmp.smi.error.MibLoadError as e:
                         log.info(
